@@ -1,0 +1,190 @@
+Design database for Zen class programme mongoDb
+
+
+
+ 
+1.Users
+ 
+db.users
+([
+  { user_id: 1, Name: "Vignesh", email: "vignesh123@gmail.com" },
+  { user_id: 2, Name: "yuvasri", email: "yuvasri890@yahoo.com" },
+  { user_id: 3, Name: "Sridhar", email: "dharsri54@gmail.com" },
+]);
+
+2.Codekata 
+
+db.codekata
+([
+  { email_id: 1, Exercise :"Array", Points: "35" },
+  { email_id: 2, Exercise: "Arithmetic", Points: "45" },
+  { email_id: 3, Exercise: "JavaScript", Points: "23" },
+  { email_id: 4, Exercise: "Java", Points: "60" },
+  { email_id: 5, Exercise: "c++", Points: "40" },
+]);
+
+3.Attendance 
+
+db.attendance.
+
+([
+  {stud_id: 01, Name: "Abitha",  No of Present: 45/50,No of Absent: 5/50},
+  {stud_id: 02, Name: "Abdul", No of Present: 46/50,No of Absent: 4/50 },
+  {stud_id: 03, Name: "Bhavya", No of Present: 47/50,No of Absent: 3/50 },
+  {stud_id: 04, Name: "Charu", No of Present: 48/50,No of Absent: 2/50 },
+  {stud_id: 05, Name: "Dhanush", No of Present: 45/50,No of Absent:5/50},
+]);
+
+4.Topics 
+
+db.topics
+([
+  { topic_id: 1, name: "Data Structures" },
+  { topic_id: 2, name: "Algorithms" },
+  { topic_id: 3, name: "Database Design" },
+  { topic_id: 5, name: "Artificial Intelligence Concepts" },
+]);
+
+5.Tasks 
+
+db.tasks
+([
+  { task_id: 1, task_name: "bulk email tool", status: "Submitted" },
+  { task_id: 2, task_name: "TicTacToe", status: "Not Submitted" },
+  { task_id: 3, task_name: "todo list", status: "Submitted" },
+  { task_id: 4, task_name: "user management", status: "Not Submitted" },
+  { task_id: 5, task_name: "library management", status: "Submitted" },
+]);
+
+6.Company_Drives
+db.company_drives
+([
+  { drive_id: 1, name: "TCS",      },
+  { drive_id: 2, name: "Infosys",  },
+  { drive_id: 3, name: "Cognizant",  },
+  { drive_id: 4, name: "Zoho", }
+]);
+
+7.Mentors 
+
+db.mentors
+([
+  { id: 1, Name: "Sangeetha Shanmugam",Experience: 2 years },
+  { id: 2, Name: "Pugazharasan", Experience: 5 years  },
+  { id: 3, Name: "arun", Experience: 14 years  },
+]);
+
+
+1.Find all the topics and tasks which are thought in the month of October
+
+db.topics.find();
+db.tasks.find({ created_at: { $gte: ISODate("2020-10-01"), $lte: ISODate("2020-10-31") } });
+
+2.Find all the company drives which appeared between 15 oct-2020 and 31-oct-2020
+
+db.company_drives.find({ date: { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") } });
+
+3.Find all the company drives and students who are appeared for the placement.
+
+db.company_drives.placement
+([
+  {
+    $lookup: {
+from: "attendance",
+      localField: "drive_id",
+      foreignField: "drive_id",
+      as: "drive_attendance"
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "drive_attendance.user_id",
+      foreignField: "user_id",
+      as: "students"
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      drive_id: 1,
+      name: 1,
+      date: 1,
+      students: {
+        user_id: 1,
+        name: 1,        email: 1
+      }
+    }
+  }
+]);
+
+4.Find the number of problems solved by the user in codekata
+
+db.tasks.aggregate([
+  {
+    $match: { status: "Submitted" }
+  },
+  {
+    $group: {
+      _id: "$user_id",
+      problems_solved: { $sum: 1 }
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "user_id",
+      as: "user_info"
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      user_id: "$_id",
+      user_name: "$user_info.name",
+      problems_solved: 1
+    }
+  }
+]);
+
+5. Find all the mentors with who has the mentee's count more than 15
+
+db.mentors.find({ mentee_count: { $gt: 15 } });
+
+
+6.Find the number of users who are absent and task is not submitted between 15 oct-2020 and 31-oct-2020
+
+db.attendance.aggregate([
+  {
+    $match: {
+      date: { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") },
+      status: "Absent"
+    }
+  },
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "user_id",
+      foreignField: "user_id",
+      as: "task_info"
+    }
+  },
+  {
+    $match: {
+      "task_info.status": { $ne: "Submitted" }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      users_count: { $sum: 1 }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      users_count: 1
+    }
+  }
+]);
